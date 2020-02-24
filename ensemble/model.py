@@ -43,6 +43,11 @@ X_valid = X_valid_full[my_cols].copy()
 X_test = data2[my_cols].copy()
 
 
+X_train = pd.get_dummies(X_train)
+X_valid = pd.get_dummies(X_valid)
+X_test = pd.get_dummies(X_test)
+X_train, X_valid = X_train.align(X_valid, join='left', axis=1)
+X_train, X_test = X_train.align(X_test, join='left', axis=1)
 
 # Bundle preprocessing for numerical and categorical data
 preprocessor = ColumnTransformer(
@@ -53,18 +58,21 @@ preprocessor = ColumnTransformer(
 from sklearn.ensemble import RandomForestClassifier
 from xgboost import XGBClassifier
 my_model = XGBClassifier(n_estimators=1000, learning_rate=0.05, n_jobs=4)
+my_model.fit(X_train , y_train , early_stopping_rounds=20, eval_set=[(X_valid,y_valid)])
+preds = my_model.predict(X_test)
+output = pd.DataFrame({'PassengerId': X_test.PassengerId,
+                       'Survived': preds})
+output.to_csv('/home/aman/Downloads/prog/hack_test/ensemble1.csv', index=False)
+
 
 from sklearn.metrics import mean_absolute_error
 model = RandomForestClassifier(n_estimators=100,criterion='entropy')
 clf = Pipeline(steps=[('preprocessor', preprocessor),
                       ('model', model)
                      ])
-clf1 = Pipeline(steps=[('preprocessor', preprocessor),
-                      ('model', my_model)
-                     ])
 
 
-my_model.fit(X_train, y_train)
+clf1.fit(X_train, y_train ,model__early_stopping_rounds=20, model__eval_set=[(X_valid,y_valid)])
 
 
 clf.fit(X_train, y_train)
